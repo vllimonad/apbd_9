@@ -2,8 +2,8 @@ namespace apbd_9.DTOs;
 
 public class TripListDTO
 {
-    public int Page { get; set; }
-    public int PageSize { get; set; }
-    public int TotalPages { get; set; }
-    public Task<List<TripDTO>> Trips { get; set; }
+    public int pageNum { get; set; }
+    public int pageSize { get; set; }
+    public int allPages { get; set; }
+    public Task<List<TripDTO>> trips { get; set; }
 }

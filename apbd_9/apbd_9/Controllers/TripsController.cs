@@ -16,8 +16,8 @@ public class TripsController : ControllerBase
         _context = context;
     }
     
-    [HttpGet]
-    public IActionResult GetListOfTrips([FromQuery] int page = 1, [FromQuery] int size = 10)
+    [HttpGet("/trips")]
+    public IActionResult GetListOfTrips([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var method = _context.Trips.Select(e => new TripDTO()
             {
@@ -31,19 +31,39 @@ public class TripsController : ControllerBase
                 })
             })
             .OrderBy(e => e.DateFrom)
-            .Skip((page-1)*size)
-            .Take(size)
+            .Skip((pageNumber-1)*pageSize)
+            .Take(pageSize)
             .ToListAsync();
         
-        var totalPages = (int)Math.Ceiling((double)_context.Trips.Count()/size);
+        var totalPages = (int)Math.Ceiling((double)_context.Trips.Count()/pageSize);
 
         var tripList = new TripListDTO
         {
-            Page = page,
-            PageSize = size,
-            TotalPages = totalPages,
-            Trips = method
+            pageNum = pageNumber,
+            pageSize = pageSize,
+            allPages = totalPages,
+            trips = method
         };
         return Ok(tripList);
     }
+
+    [HttpDelete("/clients/{idClient}")]
+    public IActionResult delteClient(int idClient)
+    {
+        var client = _context.Clients.Find(idClient);
+        if (client == null)
+        {
+            return NotFound("This client does not exist");
+        }
+
+        var hasTrip = _context.ClientTrips.Any(c => c.IdClient == idClient);
+        if (hasTrip)
+        {
+            return BadRequest("This client has at least 1 trip");
+        }
+
+        _context.Clients.Remove(client);
+        _context.SaveChanges();
+        return Ok("Client was deleted");
+    } 
 }
