@@ -1,5 +1,6 @@
 using apbd_9.Data;
 using apbd_9.DTOs;
+using apbd_9.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +25,7 @@ public class TripsController : ControllerBase
                 Name = e.Name,
                 DateFrom = e.DateFrom,
                 MaxPeople = e.MaxPeople,
-                Clients = e.ClientTrips.Select(e => new ClientDTO()
+                Clients = e.ClientTrips.Select(e => new Client()
                 {
                     FirstName = e.IdClientNavigation.FirstName,
                     LastName = e.IdClientNavigation.LastName
@@ -65,5 +66,54 @@ public class TripsController : ControllerBase
         _context.Clients.Remove(client);
         _context.SaveChanges();
         return Ok("Client was deleted");
-    } 
+    }
+
+    [HttpPost("trips/{idTrip}/clients")]
+    public IActionResult assignClient(int idTrip, ClientDTO clientDto)
+    {
+        var DoesPeselExist = _context.Clients.Any(c => c.Pesel.Equals(clientDto.Pesel));
+        if (DoesPeselExist)
+        {
+            return BadRequest("Client with this PESEL already exist");
+        }
+
+        var clientsIDs = _context.ClientTrips.Where(c => c.IdTrip == idTrip).Select(c => c.IdClient);
+        var isRegistered = clientsIDs.Any(id => _context.Clients.Find(id).Pesel.Equals(clientDto.Pesel));
+        if (isRegistered)
+        {
+            return BadRequest("Client with this PESEL already registered for this trip");
+        }
+
+        var trip = _context.Trips.Find(idTrip);
+        if (trip == null)
+        {
+            return BadRequest("This trip does not exist");
+        }
+        
+        if (trip.DateFrom <= DateTime.Now)
+        {
+            return BadRequest("This trip is already occurred");
+        }
+
+        var client = new Client
+        {
+            FirstName = clientDto.FirstName,
+            LastName = clientDto.LastName,
+            Email = clientDto.Email,
+            Telephone = clientDto.Telephone,
+            Pesel = clientDto.Pesel
+        };
+        _context.Clients.Add(client);
+        _context.SaveChanges();
+            
+        _context.ClientTrips.Add(new ClientTrip
+        {
+            IdClient = client.IdClient,
+            IdTrip = idTrip,
+            PaymentDate = clientDto.PaymentDate,
+            RegisteredAt = DateTime.Now
+        });
+        _context.SaveChanges();
+        return Ok();
+    }
 }
